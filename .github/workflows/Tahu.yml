@@ -17,12 +17,12 @@ on:
       letak:
         description: 'letak file'
         required: false
-        default: ''
+        default: 'tema-mods/luci-theme-hj'
         type: string 
       nama:
         description: 'nama ipk'
         required: true
-        default: ''
+        default: 'luci-theme-hj'
         type: string  
       changelog:
         description: 'Changelog'
@@ -32,7 +32,7 @@ on:
       url:
         description: 'url'
         required: false
-        default: ''
+        default: 'https://github.com/Dirgha80/tema-mods'
         type: string     
   push:
     tags:
