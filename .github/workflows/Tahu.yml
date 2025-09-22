@@ -58,7 +58,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION=$(grep 'PKG_VERSION:=' tema-mods/luci-theme-hj/Makefile | awk -F '=' '{print $2}' | tr -d ' ')
+          VERSION=$(grep 'PKG_VERSION:=' ${{ inputs.letak }}/Makefile | awk -F '=' '{print $2}' | tr -d ' ')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 
@@ -99,7 +99,7 @@ jobs:
       - name: Set up build environment
         run: |
           echo "::group::Setting up build environment for ${{ matrix.arch }}-${{ matrix.branch }}"
-          git clone ${{ inputs.url }}
+          # git clone ${{ inputs.url }}
           mkdir -p feeds/${{ env.PACKAGE_NAME }} artifacts
           rsync -av --exclude='.git/' --exclude='feeds/' --exclude='artifacts/' ./ ./feeds/${{ env.PACKAGE_NAME }}/
           echo "::endgroup::"
