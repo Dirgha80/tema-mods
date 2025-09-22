@@ -1,4 +1,4 @@
-name: Build luci-theme-hj
+name: Build luci-theme-hj (Minimal)
 
 on:
   workflow_dispatch:
@@ -21,30 +21,24 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Cache OpenWrt SDK
-      id: cache-sdk
-      uses: actions/cache@v4
-      with:
-        path: openwrt-sdk
-        key: ${{ runner.os }}-sdk-${{ github.event.inputs.target }}
-
-    - name: Download & Extract SDK (if not cached)
-      if: steps.cache-sdk.outputs.cache-hit != 'true'
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential git wget unzip \
           libncurses5-dev libncursesw5-dev zlib1g-dev gawk flex gettext \
-          libssl-dev xsltproc libxml-parser-perl
+          libssl-dev xsltproc libxml-parser-perl zstd rsync
 
+    - name: Download & Extract SDK
+      run: |
         case "${{ github.event.inputs.target }}" in
           x86_64)
-            SDK_URL="https://github.com/tes-rep/tes-build/releases/download/SDK2/15.tar.bz2"
+            SDK_URL="https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst"
             ;;
           ramips-mt7621)
-            SDK_URL="https://downloads.openwrt.org/releases/24.10.0/targets/ramips/mt7621/openwrt-sdk-24.10.0-ramips-mt7621_gcc-12.3.0_musl.Linux-x86_64.tar.xz"
+            SDK_URL="https://downloads.openwrt.org/releases/24.10.0/targets/ramips/mt7621/openwrt-sdk-24.10.0-ramips-mt7621_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
             ;;
           armvirt-64)
-            SDK_URL="https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst"
+            SDK_URL="https://downloads.openwrt.org/releases/24.10.0/targets/armvirt/64/openwrt-sdk-24.10.0-armvirt-64_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
             ;;
           *)
             echo "Unknown target"; exit 1
@@ -52,11 +46,9 @@ jobs:
         esac
 
         wget $SDK_URL -O sdk.tar.zst
-        tar --zstd -xf sdk.tar.zst
+        tar --use-compress-program=unzstd -xf sdk.tar.zst
         mv openwrt-sdk-* openwrt-sdk
         cd openwrt-sdk
-        
-        # Hapus feed luci default biar tidak duplikat
         sed -i '/luci/d' feeds.conf.default
         echo "src-git luci https://github.com/openwrt/luci.git" >> feeds.conf.default
         ./scripts/feeds update -a
@@ -65,23 +57,16 @@ jobs:
     - name: Build luci-theme-hj
       run: |
         cd openwrt-sdk
-        mkdir -p package/custom
-        cp -r $GITHUB_WORKSPACE package/custom/luci-theme-hj
+        mkdir -p package/custom/luci-theme-hj
+        rsync -a --exclude '.git' $GITHUB_WORKSPACE/ package/custom/luci-theme-hj/
         make defconfig
         make package/custom/luci-theme-hj/compile -j$(nproc) V=s
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: luci-theme-hj-${{ github.event.inputs.target }}
-        path: openwrt-sdk/bin/packages/*/base/luci-theme-hj_*.ipk
-
-    - name: Create Release and Upload
+    - name: Upload artifacts to release
       uses: softprops/action-gh-release@v2
-      if: github.event_name == 'workflow_dispatch'
       with:
         tag_name: "build-${{ github.run_number }}"
-        name: "luci-theme-hj build ${{ github.event.inputs.target }} (#${{ github.run_number }})"
+        name: "luci-theme-hj build ${{ github.run_number }}"
         files: openwrt-sdk/bin/packages/*/base/luci-theme-hj_*.ipk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
