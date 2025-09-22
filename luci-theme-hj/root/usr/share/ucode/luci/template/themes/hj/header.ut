@@ -77,7 +77,7 @@
 			<a id="logo" href="{{ ctx.authsession ? dispatcher.build_url('admin/status/overview') : '#' }}"><img src="{{ media }}/css/brand.png" alt="OpenWrt"></a>
 <!--------------------- NAVBAR+GAMBAR ------------------------>
 			<tr>
-             &nbsp;&nbsp;&nbsp;<td><a href='/cgi-bin/luci/admin/services/openclash'><img src="{{ media }}/navbar/clash.png" width="35" height="35"></a></td>&nbsp;&nbsp;&nbsp;
+             &nbsp;&nbsp;&nbsp;<td><a href='/cgi-bin/luci/admin/services/openclash'><img src="{{ media }}/navbar/openclash.png" width="35" height="35"></a></td>&nbsp;&nbsp;&nbsp;
              
              <td><a href='/cgi-bin/luci/admin/services/passwall'><img src="{{ media }}/navbar/p.png" width="35" height="35"></a></td>&nbsp;&nbsp;&nbsp;&nbsp;
              
