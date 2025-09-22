@@ -55,6 +55,9 @@ jobs:
         tar --zstd -xf sdk.tar.zst
         mv openwrt-sdk-* openwrt-sdk
         cd openwrt-sdk
+        
+        # Hapus feed luci default biar tidak duplikat
+        sed -i '/luci/d' feeds.conf.default
         echo "src-git luci https://github.com/openwrt/luci.git" >> feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
