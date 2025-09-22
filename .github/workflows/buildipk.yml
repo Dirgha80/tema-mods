@@ -1,0 +1,84 @@
+name: Build luci-theme-hj
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Select target architecture"
+        required: true
+        default: "x86_64"
+        type: choice
+        options:
+          - x86_64
+          - ramips-mt7621
+          - armvirt-64
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Cache OpenWrt SDK
+      id: cache-sdk
+      uses: actions/cache@v4
+      with:
+        path: openwrt-sdk
+        key: ${{ runner.os }}-sdk-${{ github.event.inputs.target }}
+
+    - name: Download & Extract SDK (if not cached)
+      if: steps.cache-sdk.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git wget unzip \
+          libncurses5-dev libncursesw5-dev zlib1g-dev gawk flex gettext \
+          libssl-dev xsltproc libxml-parser-perl
+
+        case "${{ github.event.inputs.target }}" in
+          x86_64)
+            SDK_URL="https://github.com/tes-rep/tes-build/releases/download/SDK2/15.tar.bz2"
+            ;;
+          ramips-mt7621)
+            SDK_URL="https://downloads.openwrt.org/releases/24.10.0/targets/ramips/mt7621/openwrt-sdk-24.10.0-ramips-mt7621_gcc-12.3.0_musl.Linux-x86_64.tar.xz"
+            ;;
+          armvirt-64)
+            SDK_URL="https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst"
+            ;;
+          *)
+            echo "Unknown target"; exit 1
+            ;;
+        esac
+
+        wget $SDK_URL -O sdk.tar.xz
+        tar -xf sdk.tar.xz
+        mv openwrt-sdk-* openwrt-sdk
+        cd openwrt-sdk
+        echo "src-git luci https://github.com/openwrt/luci.git" >> feeds.conf.default
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: Build luci-theme-hj
+      run: |
+        cd openwrt-sdk
+        mkdir -p package/custom
+        cp -r $GITHUB_WORKSPACE package/custom/luci-theme-hj
+        make defconfig
+        make package/custom/luci-theme-hj/compile -j$(nproc) V=s
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: luci-theme-hj-${{ github.event.inputs.target }}
+        path: openwrt-sdk/bin/packages/*/base/luci-theme-hj_*.ipk
+
+    - name: Create Release and Upload
+      uses: softprops/action-gh-release@v2
+      if: github.event_name == 'workflow_dispatch'
+      with:
+        tag_name: "build-${{ github.run_number }}"
+        name: "luci-theme-hj build ${{ github.event.inputs.target }} (#${{ github.run_number }})"
+        files: openwrt-sdk/bin/packages/*/base/luci-theme-hj_*.ipk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
