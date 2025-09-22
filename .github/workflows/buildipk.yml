@@ -27,7 +27,7 @@ jobs:
       - name: Download OpenWrt SDK
         run: |
           TARGET="${{ github.event.inputs.target || 'x86_64' }}"
-          URL="https://downloads.openwrt.org/releases/24.10.0/targets/${TARGET%%-*}/${TARGET##*-}/openwrt-sdk-24.10.0-${TARGET%%-*}-${TARGET##*-}_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
+          URL="https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst"
           wget -qO sdk.tar.zst "$URL"
           mkdir openwrt-sdk
           tar -I zstd -xf sdk.tar.zst -C openwrt-sdk --strip-components=1
