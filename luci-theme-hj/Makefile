@@ -6,13 +6,13 @@
 
 include $(TOPDIR)/rules.mk
 
-THEME_NAME:hj
+THEME_NAME:=hj
 THEME_TITLE:=hj Theme
 PKG_NAME:=luci-theme-hj
 LUCI_TITLE:=hj Theme by houjie
 LUCI_DEPENDS:=+luci-base
 PKG_VERSION:=3.0
-PKG_RELEASE:=2025-05-19
+PKG_RELEASE:=1
 
 define Package/luci-theme-hj/postrm
 #!/bin/sh
@@ -26,7 +26,6 @@ define Package/luci-theme-hj/postinst-pkg
 [ -n "${IPKG_INSTROOT}" ] || { rm -f /tmp/luci-indexcache.*
 	rm -rf /tmp/luci-modulecache/
 	killall -HUP rpcd 2>/dev/null
-        ln -s www/luci-static/hj /
 	exit 0
 }
 endef
