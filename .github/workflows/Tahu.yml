@@ -58,7 +58,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION=$(grep 'PKG_VERSION:=' ${{ inputs.letak }}/Makefile | awk -F '=' '{print $2}' | tr -d ' ')
+          VERSION=$(grep 'PKG_VERSION:=' luci-theme-hj/Makefile | awk -F '=' '{print $2}' | tr -d ' ')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 
