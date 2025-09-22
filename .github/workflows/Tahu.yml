@@ -58,7 +58,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION=$(grep 'PKG_VERSION:=' ./Makefile | awk -F '=' '{print $2}' | tr -d ' ')
+          VERSION=$(grep 'PKG_VERSION:=' tema-mod/luci-theme-hj/Makefile | awk -F '=' '{print $2}' | tr -d ' ')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 
@@ -71,7 +71,7 @@ jobs:
           name: "v${{ steps.version.outputs.version }} Release"
           body: |
             ## 🚀 **Release v${{ steps.version.outputs.version }}** 🚀
-            ![Total_Download](https://img.shields.io/github/downloads/rizkikotet-dev/luci-theme-rtawrt/v${{ steps.version.outputs.version }}/total?style=for-the-badge&labelColor=blue)
+            ![Total_Download](https://img.shields.io/github/downloads/tes-rep/luci-theme-hh/v${{ steps.version.outputs.version }}/total?style=for-the-badge&labelColor=blue)
 
 
             Kami dengan bangga mempersembahkan **v${{ steps.version.outputs.version }}** dari **${{ env.PACKAGE_NAME }}**! Rilis ini membawa berbagai peningkatan, perbaikan bug, dan fitur baru yang akan membuat pengalaman Anda lebih baik. Terima kasih atas dukungan dan masukan Anda!
