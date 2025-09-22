@@ -1,10 +1,10 @@
-name: Build luci-theme-hj (Minimal)
+name: Build luci-theme-hj
 
 on:
   workflow_dispatch:
     inputs:
       target:
-        description: "Select target architecture"
+        description: "OpenWrt SDK target"
         required: true
         default: "x86_64"
         type: choice
@@ -12,61 +12,53 @@ on:
           - x86_64
           - ramips-mt7621
           - armvirt-64
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential git wget unzip \
-          libncurses5-dev libncursesw5-dev zlib1g-dev gawk flex gettext \
-          libssl-dev xsltproc libxml-parser-perl zstd rsync
+      - name: Download OpenWrt SDK
+        run: |
+          TARGET="${{ github.event.inputs.target || 'x86_64' }}"
+          URL="https://downloads.openwrt.org/releases/24.10.0/targets/${TARGET%%-*}/${TARGET##*-}/openwrt-sdk-24.10.0-${TARGET%%-*}-${TARGET##*-}_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
+          wget -qO sdk.tar.zst "$URL"
+          mkdir openwrt-sdk
+          tar -I zstd -xf sdk.tar.zst -C openwrt-sdk --strip-components=1
 
-    - name: Download & Extract SDK
-      run: |
-        case "${{ github.event.inputs.target }}" in
-          x86_64)
-            SDK_URL="https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst"
-            ;;
-          ramips-mt7621)
-            SDK_URL="https://downloads.openwrt.org/releases/24.10.0/targets/ramips/mt7621/openwrt-sdk-24.10.0-ramips-mt7621_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
-            ;;
-          armvirt-64)
-            SDK_URL="https://downloads.openwrt.org/releases/24.10.0/targets/armvirt/64/openwrt-sdk-24.10.0-armvirt-64_gcc-12.3.0_musl.Linux-x86_64.tar.zst"
-            ;;
-          *)
-            echo "Unknown target"; exit 1
-            ;;
-        esac
+      - name: Prepare feeds
+        run: |
+          cd openwrt-sdk
+          # hanya pakai luci feed
+          sed -i '/luci/d' feeds.conf.default
+          echo "src-git luci https://github.com/openwrt/luci.git" >> feeds.conf.default
+          ./scripts/feeds update luci
+          ./scripts/feeds install luci-base
 
-        wget $SDK_URL -O sdk.tar.zst
-        tar --use-compress-program=unzstd -xf sdk.tar.zst
-        mv openwrt-sdk-* openwrt-sdk
-        cd openwrt-sdk
-        sed -i '/luci/d' feeds.conf.default
-        echo "src-git luci https://github.com/openwrt/luci.git" >> feeds.conf.default
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
+      - name: Copy theme source
+        run: |
+          cd openwrt-sdk
+          mkdir -p package/custom/luci-theme-hj
+          rsync -a --exclude '.git' $GITHUB_WORKSPACE/ package/custom/luci-theme-hj/
 
-    - name: Build luci-theme-hj
-      run: |
-        cd openwrt-sdk
-        mkdir -p package/custom/luci-theme-hj
-        rsync -a --exclude '.git' $GITHUB_WORKSPACE/ package/custom/luci-theme-hj/
-        make defconfig
-        make package/custom/luci-theme-hj/compile -j$(nproc) V=s
+      - name: Build luci-theme-hj
+        run: |
+          cd openwrt-sdk
+          make defconfig
+          make package/custom/luci-theme-hj/compile -j$(nproc) V=s IGNORE_ERRORS=m
 
-    - name: Upload artifacts to release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: "build-${{ github.run_number }}"
-        name: "luci-theme-hj build ${{ github.run_number }}"
-        files: openwrt-sdk/bin/packages/*/base/luci-theme-hj_*.ipk
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "theme-build-${{ github.run_number }}"
+          name: "luci-theme-hj build ${{ github.run_number }}"
+          files: |
+            openwrt-sdk/bin/packages/*/base/luci-theme-hj*.ipk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
