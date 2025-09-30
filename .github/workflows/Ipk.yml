@@ -1,8 +1,8 @@
-name: build Packages3
+name: Build luci-app-netmon
 
 on:
   workflow_dispatch:
-   inputs:
+    inputs:
       releases_branch:
         description: "Select the releases branch"
         required: false
@@ -15,14 +15,14 @@ on:
           - openwrt-23.05
           - SNAPSHOT
       letak:
-        description: 'letak file'
+        description: 'Letak folder package'
         required: false
-        default: 'tema-mods/luci-theme-hj'
+        default: 'tema-mods/luci-app-netmon'
         type: string 
       nama:
-        description: 'nama ipk'
+        description: 'Nama package'
         required: true
-        default: 'luci-theme-hj'
+        default: 'luci-app-netmon'
         type: string  
       changelog:
         description: 'Changelog'
@@ -30,7 +30,7 @@ on:
         default: '-'
         type: string
       url:
-        description: 'url'
+        description: 'Repo URL'
         required: false
         default: 'https://github.com/Dirgha80/tema-mods'
         type: string     
@@ -62,21 +62,6 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 
-      - name: Upload release artifacts
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "v${{ steps.version.outputs.version }}"
-          generate_release_notes: true
-          draft: false
-          name: "v${{ steps.version.outputs.version }}"
-          body: |
-            ## 🚀 **Release v${{ steps.version.outputs.version }}** 🚀
-            ![Total_Download](https://img.shields.io/github/downloads/Dirgha80/tema-mods/luci-theme-hj/v${{ steps.version.outputs.version }}/total?style=for-the-badge&labelColor=blue)
-
-
-            Kami dengan bangga mempersembahkan **v${{ steps.version.outputs.version }}** dari **${{ env.PACKAGE_NAME }}**! Rilis ini membawa berbagai peningkatan, perbaikan bug, dan fitur baru yang akan membuat pengalaman Anda lebih baik. Terima kasih atas dukungan dan masukan Anda!
-
-            ---
   release:
     name: Release ${{ matrix.arch }}-${{ matrix.branch }}
     needs: get-version
@@ -100,49 +85,28 @@ jobs:
           curl -SLk --retry 3 "https://github.com/tes-rep/tes-build/releases/download/SDK2/15.tar.bz2" -o /tmp/SDK.tar.bz2
           tar -xjf /tmp/SDK.tar.bz2 -C /tmp
           mv /tmp/OpenWrt-SDK-* $GITHUB_WORKSPACE/SNAPSDK
-          
 
-      - name: Clone luci-app-openclash
+      - name: Clone luci-app-netmon
         run: |
           set -e
-          
           cd "$GITHUB_WORKSPACE/SNAPSDK/package"
-            rm -rf luci-app-netmon
-            git clone --depth 1 --branch master --filter=blob:none --sparse https://github.com/Dirgha80/tema-mods luci-app-netmon
-            cd luci-app-netmon && git sparse-checkout set luci-app-netmon
+          rm -rf ${{ inputs.nama }}
+          git clone --depth 1 --branch master --filter=blob:none --sparse ${{ inputs.url }} ${{ inputs.nama }}
+          cd ${{ inputs.nama }} && git sparse-checkout set ${{ inputs.nama }}
 
-      - name: Compile luci-app-openclash
+      - name: Compile package
         run: |
           set -e
-          cd "$GITHUB_WORKSPACE/SNAPSDK" 
-          make package/luci-app-netmon/luci-app-netmon/compile V=99
-          
-          
-      - name: List built packages
-        run: |
-          find ${{ github.workspace }}/artifacts -type f -name "${{ env.PACKAGE_NAME }}*.ipk" -o -name "${{ env.PACKAGE_NAME }}*.apk" | sort
-          echo "::endgroup::"
+          cd "$GITHUB_WORKSPACE/SNAPSDK"
+          make package/${{ inputs.nama }}/compile V=99
 
-      - name: Prepare release artifacts
+      - name: Collect artifacts
         run: |
-          # Create release artifacts directory
           mkdir -p ${{ github.workspace }}/release-artifacts
-
-          # Handle different file extensions based on branch
-          if [[ "${{ matrix.branch }}" == "SNAPSHOT" ]]; then
-            # For SNAPSHOT branch - copy APK files
-            find ${{ github.workspace }}/artifacts/bin/packages -name "${{ env.PACKAGE_NAME }}*.apk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
-            find ${{ github.workspace }}/artifacts/bin/targets -name "${{ env.PACKAGE_NAME }}*.apk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
-          else
-            # For other branches - copy IPK files
-            find ${{ github.workspace }}/artifacts/bin/packages -name "${{ env.PACKAGE_NAME }}*.ipk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
-            find ${{ github.workspace }}/artifacts/bin/targets -name "${{ env.PACKAGE_NAME }}*.ipk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
-          fi
-
-          # Debug: list contents
+          find $GITHUB_WORKSPACE/SNAPSDK/bin/packages -name "${{ inputs.nama }}*.ipk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
+          find $GITHUB_WORKSPACE/SNAPSDK/bin/targets -name "${{ inputs.nama }}*.ipk" -exec cp {} ${{ github.workspace }}/release-artifacts/ \; || true
           echo "Contents of release-artifacts directory:"
           ls -la ${{ github.workspace }}/release-artifacts/
-
 
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
