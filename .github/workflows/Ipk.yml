@@ -114,6 +114,7 @@ jobs:
       - name: Compile luci-app-openclash
         run: |
           set -e
+          cd "$GITHUB_WORKSPACE/SNAPSDK" 
           make package/luci-app-netmon/luci-app-netmon/compile V=99
           fi
           
