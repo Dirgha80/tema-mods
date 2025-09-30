@@ -108,7 +108,7 @@ jobs:
           
           cd "$GITHUB_WORKSPACE/SNAPSDK/package"
             rm -rf luci-app-openclash
-            git clone --depth 1 --branch mastee --filter=blob:none --sparse https://github.com/Dirgha80/tema-mods luci-app-netmon
+            git clone --depth 1 --branch master --filter=blob:none --sparse https://github.com/Dirgha80/tema-mods luci-app-netmon
             cd luci-app-netmon && git sparse-checkout set luci-app-netmon
           
       - name: List built packages
