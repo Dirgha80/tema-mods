@@ -1,6 +1,6 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=luci-app-netmon
+PKG_NAME:=luci-app-netmonitor
 PKG_VERSION:=1.0.1
 PKG_RELEASE:=1
 
@@ -9,7 +9,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/$(PKG_NAME)
   SECTION:=utils
   CATEGORY:=Utilities
-  TITLE:=luci-app-netmon
+  TITLE:=luci-app-netmonitor
   DEPENDS:=+libc +netdata
 endef
 
@@ -18,7 +18,6 @@ dependensi libc dan netdata.by houjie80
 endef
 
 define Build/Compile
-	# Kalau tidak ada compile, biarkan kosong
 	true
 endef
 
