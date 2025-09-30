@@ -1,38 +1,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-netdata
-PKG_VERSION:=1.0
+PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 
-include $(INCLUDE_DIR)/package.mk
+LUCI_TITLE:=LuCI support for Netdata
+LUCI_DEPENDS:=+netdata
+LUCI_PKGARCH:=all
 
-define Package/$(PKG_NAME)
-  SECTION:=utils
-  CATEGORY:=Utilities
-  TITLE:=luci-app-netdata
-  DEPENDS:=+libc +netdata
-endef
-
-define Package/$(PKG_NAME)/description
-dependensi libc dan netdata.
-endef
-
-define Build/Compile
-	# Kalau tidak ada compile, biarkan kosong
-	true
-endef
-
-
-define Package/$(PKG_NAME)/prerm
-#!/bin/sh
-# dijalankan sebelum remove
-exit 0
-endef
-
-define Package/$(PKG_NAME)/postrm
-#!/bin/sh
-# dijalankan setelah remove
-exit 0
-endef
+include $(TOPDIR)/feeds/luci/luci.mk
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
