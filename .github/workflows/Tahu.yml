@@ -58,7 +58,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION=$(grep 'PKG_VERSION:=' luci-theme-hj/Makefile | awk -F '=' '{print $2}' | tr -d ' ')
+          VERSION=$(grep 'PKG_VERSION:=' ${{ inputs.letak }}/Makefile | awk -F '=' '{print $2}' | tr -d ' ')
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "New Version: ${VERSION}"
 
@@ -112,7 +112,7 @@ jobs:
           FEED_DIR: ${{ github.workspace }}/feeds
           PACKAGES: ${{ env.PACKAGE_NAME }}
           NO_REFRESH_CHECK: true
-
+          SKIP_DOWNLOAD: true   # 🚀 tambahkan ini
       - name: List built packages
         run: |
           find ${{ github.workspace }}/artifacts -type f -name "${{ env.PACKAGE_NAME }}*.ipk" -o -name "${{ env.PACKAGE_NAME }}*.apk" | sort
