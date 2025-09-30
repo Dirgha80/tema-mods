@@ -116,7 +116,7 @@ jobs:
           set -e
           cd "$GITHUB_WORKSPACE/SNAPSDK" 
           make package/luci-app-netmon/luci-app-netmon/compile V=99
-          fi
+          
           
       - name: List built packages
         run: |
