@@ -1,4 +1,4 @@
-name: build Packages2
+name: build Packages
 
 on:
   workflow_dispatch:
@@ -65,7 +65,7 @@ jobs:
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "${{ inputs.nama }}_v${{ steps.version.outputs.version }}"
+          tag_name: "v${{ steps.version.outputs.version }}"
           generate_release_notes: true
           draft: false
           name: "v${{ steps.version.outputs.version }}"
@@ -91,28 +91,26 @@ jobs:
           - ${{ inputs.releases_branch }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout build repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
-      - name: Set up build environment
+      - name: Download SDK if cache miss
         run: |
-          echo "::group::Setting up build environment for ${{ matrix.arch }}-${{ matrix.branch }}"
-          # git clone ${{ inputs.url }}
-          mkdir -p feeds/${{ env.PACKAGE_NAME }} artifacts
-          rsync -av --exclude='.git/' --exclude='feeds/' --exclude='artifacts/' ./ ./feeds/${{ env.PACKAGE_NAME }}/
-          echo "::endgroup::"
+          set -e
+          curl -SLk --retry 3 "https://github.com/tes-rep/tes-build/releases/download/SDK2/15.tar.bz2" -o /tmp/SDK.tar.bz2
+          tar -xjf /tmp/SDK.tar.bz2 -C /tmp
+          mv /tmp/OpenWrt-SDK-* $GITHUB_WORKSPACE/SNAPSDK
+          
 
-      - name: Build package
-        uses: openwrt/gh-action-sdk@main
-        env:
-          ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
-          ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
-          FEED_DIR: ${{ github.workspace }}/feeds
-          PACKAGES: ${{ env.PACKAGE_NAME }}
-          NO_REFRESH_CHECK: true
-          SKIP_DOWNLOAD: true   # 🚀 tambahkan ini
+      - name: Clone luci-app-openclash
+        run: |
+          set -e
+          
+          cd "$GITHUB_WORKSPACE/SNAPSDK/package"
+            rm -rf luci-app-openclash
+            git clone --depth 1 --branch mastee --filter=blob:none --sparse https://github.com/Dirgha80/tema-mods luci-app-netmon
+            cd luci-app-netmon && git sparse-checkout set luci-app-netmon
+          
       - name: List built packages
         run: |
           find ${{ github.workspace }}/artifacts -type f -name "${{ env.PACKAGE_NAME }}*.ipk" -o -name "${{ env.PACKAGE_NAME }}*.apk" | sort
@@ -142,6 +140,6 @@ jobs:
       - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "${{ inputs.nama }}_v${{ needs.get-version.outputs.version }}"
+          tag_name: "v${{ needs.get-version.outputs.version }}"
           files: |
             ${{ github.workspace }}/release-artifacts/*
