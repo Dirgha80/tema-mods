@@ -18,9 +18,9 @@ jobs:
 
       - name: Download OpenWrt SDK
         run: |
-          wget https://downloads.openwrt.org/releases/24.10.0/targets/x86/64/openwrt-sdk-24.10.0-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
-          tar -xf openwrt-sdk-24.10.0-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
-          mv openwrt-sdk-* SNAPSDK
+          curl -SLk --retry 3 "https://github.com/tes-rep/tes-build/releases/download/SDK2/snap.tar.zst" -o /tmp/SNAPSDK.tar.zst
+          tar --zstd -xf /tmp/SNAPSDK.tar.zst -C /tmp
+          mv /tmp/openwrt-sdk-* SNAPSDK
 
       - name: Update feeds
         run: |
