@@ -1,0 +1,68 @@
+{#
+	Material is a clean HTML5 theme for LuCI. It is based on luci-theme-bootstrap and MUI
+	
+	luci-theme-hj
+	Copyright 2023 saitri <saiitrii@gmail.com>
+	
+	
+	luci-theme-material
+	Copyright 2015 Lutty Yang <lutty@wcan.in>
+
+	Have a bug? Please create an issue here on GitHub!
+	https://github.com/LuttyYang/luci-theme-material/issues
+
+	luci-theme-bootstrap:
+	Copyright 2008 Steven Barth <steven@midlink.org>
+	Copyright 2008 Jo-Philipp Wich <jow@openwrt.org>
+	Copyright 2012 David Menting <david@nut-bolt.nl>
+
+	MUI:
+	https://github.com/muicss/mui
+
+	Licensed to the public under the Apache License 2.0
+-#}
+
+			</div>
+			<footer class="mobile-hide">
+				<a href="https://github.com/openwrt/luci">Powered by {{ version.distversion }} | {{ "themes-hj" }} {{ "v0.1" }}</a>
+
+  <script type="text/javascript" src="{{ media }}/script.js"></script>
+			</footer>
+		</div>
+	</div>
+	<div id="tempcpu"></div>
+    <div id="cpuusage"></div>
+    <div id="zerotier_status"></div>
+    <div id="_clash"></div>
+    <div id="isp"></div>
+    <div id="address"></div>
+    <div id="ip"></div>
+    <div id="neko_status"></div>
+    <div id="wall"></div>
+    <div id="ramTotal"></div>
+	<script type="text/javascript">L.require('menu-hj')</script>
+	<style>
+
+img:hover {
+
+  animation: shake 0.5s;
+
+  animation-iteration-count: infinite;
+}
+
+@keyframes shake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  10% { transform: translate(-1px, -2px) rotate(-1deg); }
+  20% { transform: translate(-3px, 0px) rotate(1deg); }
+  30% { transform: translate(3px, 2px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(1deg); }
+  50% { transform: translate(-1px, 2px) rotate(-1deg); }
+  60% { transform: translate(-3px, 1px) rotate(0deg); }
+  70% { transform: translate(3px, 1px) rotate(-1deg); }
+  80% { transform: translate(-1px, -1px) rotate(1deg); }
+  90% { transform: translate(1px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+</style>
+</body>
+</html>
