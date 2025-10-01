@@ -1,0 +1,70 @@
+name: Build luci-app-netdata
+
+on:
+  workflow_dispatch:
+    inputs:
+      nama:
+        description: "Nama paket (contoh: luci-app-netdata)"
+        required: true
+        default: "luci-app-netdata"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download OpenWrt SDK
+        run: |
+          wget https://downloads.openwrt.org/releases/24.10.0/targets/x86/64/openwrt-sdk-24.10.0-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+          tar -xf openwrt-sdk-24.10.0-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+          mv openwrt-sdk-* SNAPSDK
+
+      - name: Update feeds
+        run: |
+          cd SNAPSDK
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Copy custom package
+        run: |
+          mkdir -p SNAPSDK/package/custom
+          cp -r ${{ inputs.nama }} SNAPSDK/package/custom/
+
+      - name: Build package
+        run: |
+          cd SNAPSDK
+          make defconfig
+          make package/${{ inputs.nama }}/compile V=s
+
+      - name: Debug SDK output
+        run: |
+          echo "===> Cek isi folder bin/"
+          ls -R SNAPSDK/bin || true
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p release-artifacts
+          # coba copy dari packages
+          cp -vf SNAPSDK/bin/packages/*/*/${{ inputs.nama }}*.ipk release-artifacts/ || true
+          # coba copy dari targets
+          cp -vf SNAPSDK/bin/targets/*/*/packages/${{ inputs.nama }}*.ipk release-artifacts/ || true
+          echo "===> Daftar file sebelum rename:"
+          ls -la release-artifacts/ || true
+
+      - name: Rename artifacts
+        run: |
+          cd release-artifacts
+          for f in *.ipk; do
+            mv "$f" "houjie-${f}"
+          done
+          echo "===> Daftar file setelah rename:"
+          ls -la
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: houjie-ipk
+          path: release-artifacts/*.ipk

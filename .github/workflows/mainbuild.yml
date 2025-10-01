@@ -1,0 +1,101 @@
+#
+# Copyright (C) 2024 nosignals
+#
+name: Building ipk
+
+on:
+  workflow_dispatch:
+    inputs:
+      letak:
+        description: 'letak file'
+        required: true
+        default: ''
+        type: string 
+      nama:
+        description: 'nama app'
+        required: true
+        default: ''
+        type: string  
+      changelog:
+        description: 'Changelog'
+        required: true
+        default: '-'
+        type: string
+      url:
+        description: 'url'
+        required: false
+        default: ''
+        type: string  
+        
+jobs: 
+  build_ipk:
+    permissions:
+      contents: write
+    name: Build ipk
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        release:
+          - 23.05.4
+        arch:
+          - x86_64
+          
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+          
+      - name: Preparing ${{ inputs.nama }}
+        run: |
+              echo ""
+              git clone ${{ inputs.url }}
+              mkdir feeds artifacts
+              cp -rf ./${{ inputs.letak }} ./feeds
+        
+      - name: Building ${{ inputs.nama }}
+        uses: nosignals/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.release }}
+          ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+          FEED_DIR: ${{ github.workspace }}/feeds
+          PACKAGES: ${{ inputs.nama }}
+          NO_SHFMT_CHECK: 1
+        
+      - name: Delivering Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: neko-${{ matrix.release }}_${{ matrix.arch }}
+          path: ${{ github.workspace }}/artifacts/bin/packages/${{ matrix.arch }}/action/${{ inputs.nama }}*
+
+  push_packages:
+    needs: build_ipk
+    name: Push Packages to Release
+    permissions:
+      contents: write  # To push a branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mengatur tanggal
+        id: date
+        run: echo "date=$(date +'%d-%m-%y')" >> $GITHUB_OUTPUT
+        
+      - name: Download temporary artifact
+        uses: actions/download-artifact@v4
+        
+      - name: Moving artifact to releases
+        shell: bash
+        run: |
+          mkdir ./release
+          cp -rf ./neko-23.05.4_x86_64/${{ inputs.nama }}* ./release/${{ inputs.nama }}_${{ steps.date.outputs.date }}.ipk
+        
+      - name: Upload release asset
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./release/*
+          overwrite: true
+          tag: ${{ inputs.nama }}
+          file_glob: true
+          body: |
+            # ${{ inputs.nama }}
