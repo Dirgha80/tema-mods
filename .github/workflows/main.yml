@@ -1,0 +1,64 @@
+name: Build luci-theme-hj
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "OpenWrt SDK target"
+        required: true
+        default: "x86_64"
+        type: choice
+        options:
+          - x86_64
+          - ramips-mt7621
+          - armvirt-64
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download OpenWrt SDK
+        run: |
+          TARGET="${{ github.event.inputs.target || 'x86_64' }}"
+          URL="https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst"
+          wget -qO sdk.tar.zst "$URL"
+          mkdir openwrt-sdk
+          tar -I zstd -xf sdk.tar.zst -C openwrt-sdk --strip-components=1
+
+      - name: Prepare feeds
+        run: |
+          cd openwrt-sdk
+          # hanya pakai luci feed
+          sed -i '/luci/d' feeds.conf.default
+          echo "src-git luci https://github.com/openwrt/luci.git" >> feeds.conf.default
+          ./scripts/feeds update luci
+          ./scripts/feeds install luci-base
+
+      - name: Copy theme source
+        run: |
+          cd openwrt-sdk
+          mkdir -p package/custom/luci-theme-hj
+          rsync -a --exclude '.git' $GITHUB_WORKSPACE/ package/custom/luci-theme-hj/
+
+      - name: Build luci-theme-hj
+        run: |
+          cd openwrt-sdk
+          make defconfig
+          make package/custom/luci-theme-hj/compile -j$(nproc) V=s IGNORE_ERRORS=m
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "theme-build-${{ github.run_number }}"
+          name: "luci-theme-hj build ${{ github.run_number }}"
+          files: |
+            openwrt-sdk/bin/packages/*/base/luci-theme-hj*.ipk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
