@@ -22,11 +22,7 @@ jobs:
           tar --zstd -xf /tmp/SNAPSDK.tar.zst -C /tmp
           mv /tmp/openwrt-sdk-* SNAPSDK
 
-      - name: Update feeds
-        run: |
-          cd SNAPSDK
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+    
 
       - name: Copy custom package
         run: |
