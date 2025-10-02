@@ -4,8 +4,6 @@ PKG_NAME:=luci-app-netmon
 PKG_VERSION:=1.0.2
 PKG_RELEASE:=1
 
-include $(INCLUDE_DIR)/package.mk
-
 define Package/$(PKG_NAME)
   SECTION:=utils
   CATEGORY:=Utilities
@@ -15,10 +13,6 @@ endef
 
 define Package/$(PKG_NAME)/description
 dependensi libc dan netdata.by houjie80
-endef
-
-define Build/Compile
-	true
 endef
 
 
@@ -32,4 +26,5 @@ define Package/$(PKG_NAME)/postrm
 exit 0
 endef
 
+include $(TOPDIR)/feeds/luci/luci.mk
 $(eval $(call BuildPackage,$(PKG_NAME)))
