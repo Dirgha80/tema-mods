@@ -90,14 +90,9 @@ jobs:
           tag_name: build_ipk
           name: "build_ipk"
           body: |
-            ## OpenClash v${{ needs.check-version.outputs.latest_ver }}
-            **Changelog:**
-            - Update versi terbaru dari vernesong/dev
-            - **Full Changelog**: https://github.com/vernesong/OpenClash/commits/dev/
-            - Commit terakhir: ${{ needs.check-version.outputs.commit_msg }}
             - Build IPK & APK
-          files: 
-            all-artifacts/*.ipk
+       
+            files: all-artifacts/**/*.ipk
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     
