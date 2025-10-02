@@ -1,94 +1,79 @@
-name: Build IPK
+name: Build multiple ipk
 
 on:
-  push:
-    branches:
-      - ${{ github.ref_name }}
-    paths:
-      - 'luci-theme-hj/Makefile'
   workflow_dispatch:
+    inputs:
+      nama:
+        description: "Daftar paket (pisahkan dengan spasi, contoh: luci-app-netdata luci-app-ttyd)"
+        required: true
+        default: "luci-app-netdata luci-app-ttyd"
 
 jobs:
   build:
-    name: Build IPK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
-      - name: 🔄 Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🛠️ Set up build environment
+      - name: Download OpenWrt SDK
         run: |
-          echo -e "\033[34m🔨 Preparing build environment \033[0m"
-          sudo -E apt-get update > /dev/null 2>&1
-          sudo -E apt-get install build-essential clang flex bison g++ gawk gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev python3-setuptools rsync swig unzip zlib1g-dev file wget > /dev/null 2>&1
-          sudo -E apt-get autoremove --purge > /dev/null 2>&1
-          sudo -E apt-get clean > /dev/null 2>&1
-          
-          echo -e "\033[34m🔧 Configuring environment \033[0m"
-          PKG_NAME=luci-theme-hj
-          PKG_VERSION=$(grep -oP 'PKG_VERSION:=\K.*' luci-theme-hj/Makefile)
-          export TERM=xterm
-          echo "PKG_VERSION=$PKG_VERSION" >> $GITHUB_ENV
-          echo "PKG_NAME=$PKG_NAME" >> $GITHUB_ENV
-          echo -e "\033[34m\t📦 PKG_NAME:\033[37m $PKG_NAME \033[0m"
-          echo -e "\033[34m\t🔖 PKG_VERSION:\033[37m $PKG_VERSION \033[0m"
-          echo -e "\033[34m\t💻 TERM:\033[37m xterm \033[0m"
+          curl -SLk --retry 3 "https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst" -o /tmp/SNAPSDK.tar.zst
+          tar --zstd -xf /tmp/SNAPSDK.tar.zst -C /tmp
+          mv /tmp/openwrt-sdk-* SNAPSDK
 
-      - name: 📦 Set up resources
+      - name: Copy custom packages
         run: |
-          echo -e "\033[34m🗂️ Downloading SDK OpenWRT \033[0m"
-          curl -s -L https://downloads.openwrt.org/releases/24.10.0/targets/armsr/armv8/openwrt-sdk-24.10.0-rc7-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst -o sdk.tar.xz
-          mkdir sdk && tar -xf sdk.tar.xz -C sdk --strip-components=1
+          mkdir -p SNAPSDK/package/custom
+          for pkg in ${{ inputs.nama }}; do
+            echo "===> Copy $pkg"
+            cp -r "$pkg" SNAPSDK/package/custom/ || true
+          done
 
-          echo -e "\033[34m📦 Cloning $PKG_NAME package \033[0m"
-          cp -rf ./luci-theme-hj sdk/package/${PKG_NAME}
-
-      - name: 📡 Set up SDK feeds
+      - name: Build packages
         run: |
-          echo -e "\033[34m🔍 Updating SDK feeds \033[0m"
-          cd sdk
-          ./scripts/feeds update -a > /dev/null 2>&1
+          cd SNAPSDK
+          make defconfig
+          for pkg in ${{ inputs.nama }}; do
+            echo "===> Build $pkg"
+            make package/$pkg/compile V=s || true
+          done
 
-          echo -e "\033[34m🔗 Installing SDK feeds \033[0m"
-          ./scripts/feeds install -a > /dev/null 2>&1
-
-      - name: ⚙️ Configure & compile IPK
+      - name: Collect artifacts
         run: |
-          echo -e "\033[34m🔧 Configuring SDK \033[0m"
-          cd sdk && make defconfig > /dev/null 2>&1
-          rm -rf feeds/luci/contrib/package/csstidy
-          sed -i '/^CONFIG_LUCI_JSMIN=/d' .config
-          sed -i '/^CONFIG_LUCI_CSSTIDY=/d' .config
+          mkdir -p release-artifacts
+          cp -vf SNAPSDK/bin/packages/*/*/*.ipk release-artifacts/ 2>/dev/null || true
+          cp -vf SNAPSDK/bin/targets/*/*/packages/*.ipk release-artifacts/ 2>/dev/null || true
+          echo "===> Semua file IPK terkumpul:"
+          ls -la release-artifacts/ || true
 
-          echo -e "\033[34m🔨 Compiling ${PKG_NAME} package \033[0m"
-          make package/${PKG_NAME}/{clean,compile} -j$(nproc) > /dev/null 2>&1
+      - name: Upload artifacts (Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: houjie-ipk
+          path: release-artifacts/*.ipk
 
-          echo -e "\033[34m📦 Compilation completed: \033[0m"
-          PKG_PATH=$(find bin/packages/x86_64/action/luci-theme*)
-          PKG_FILE=$(basename $PKG_PATH)
-          echo "PKG_PATH=sdk/$PKG_PATH" >> $GITHUB_ENV
-          echo "PKG_FILE=$PKG_FILE" >> $GITHUB_ENV
-          echo -e "\033[34m\t📂 Package path:\033[37m $PKG_PATH \033[0m"
-          echo -e "\033[34m\t📄 Package file:\033[37m $PKG_FILE \033[0m"
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
 
-      - name: 🚀 Generate new tag & release
-        uses: softprops/action-gh-release@v2
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: ${{ env.PKG_NAME }}
-          tag_name: ${{ env.PKG_VERSION }}
+          tag_name: build-${{ github.run_number }}
+          release_name: "Build paket: ${{ inputs.nama }} #${{ github.run_number }}"
           draft: false
           prerelease: false
-          files: ${{ env.PKG_PATH }}
-          body: |
-            ### Changelog ${{ env.PKG_VERSION }}:
 
-            **📦 New build of ${{ env.PKG_NAME }}**
-
-            **🐞 Bug fixes and improvements**
-            
-            **📸 Screenshot of application**
-
-            **📝 Full Changelog**
+      - name: Upload Release Assets (per file)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for file in release-artifacts/*.ipk; do
+            echo "===> Upload $file"
+            gh release upload build-${{ github.run_number }} "$file" --clobber
+          done
