@@ -6,7 +6,7 @@ on:
       nama:
         description: "Daftar paket (pisahkan dengan spasi, contoh: luci-app-netdata luci-app-ttyd)"
         required: true
-        default: "luci-app-netdata luci-app-ttyd"
+        default: "luci-app-netmonitor luci-theme-hj luci-app-netmon"
 
 jobs:
   set-matrix:
