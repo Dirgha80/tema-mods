@@ -2,7 +2,7 @@
 # Copyright (c) 2022-2023 SMALLPROGRAM <https://github.com/smallprogram>
 # Description: Auto compile
 #
-name: "Auto compile with OpenWrt SDK for Main"
+name: "Auto compile with OpenWrt SDK for Ma6in"
 on:
   repository_dispatch:
   workflow_dispatch:
