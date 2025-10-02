@@ -4,17 +4,13 @@ PKG_NAME:=luci-app-netmon
 PKG_VERSION:=1.0.2
 PKG_RELEASE:=1
 
-define Package/$(PKG_NAME)
-  SECTION:=utils
-  CATEGORY:=Utilities
-  TITLE:=luci-app-netmonitor
-  DEPENDS:=+libc +netdata
-endef
+LUCI_TITLE:=NetMonitor LuCI app
+LUCI_DEPENDS:=+luci-base +netdata
 
 define Package/$(PKG_NAME)/description
-dependensi libc dan netdata.by houjie80
+  LuCI interface for NetMonitor.
+  Requires netdata. By houjie80.
 endef
-
 
 define Package/$(PKG_NAME)/prerm
 #!/bin/sh
@@ -27,4 +23,3 @@ exit 0
 endef
 
 include $(TOPDIR)/feeds/luci/luci.mk
-$(eval $(call BuildPackage,$(PKG_NAME)))
