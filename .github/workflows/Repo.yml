@@ -1,4 +1,4 @@
-name: Build multiple ipk +clone repo
+name: Build multiple ipk+clone repo
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
       repo_url:
         description: "Repo fallback untuk clone (digunakan kalau input nama kosong)"
         required: false
-        default: "https://github.com/tes-rep/luci-packages"
+        default: "https://github.com/de-quenx/luci-theme-argon"
 
 jobs:
   set-matrix:
@@ -23,11 +23,21 @@ jobs:
         run: |
           if [ -z "${{ inputs.nama }}" ]; then
             echo "Input kosong → clone repo: ${{ inputs.repo_url }}"
-            git clone ${{ inputs.repo_url }} fallback-pkgs
-            arr=$(ls fallback-pkgs | jq -R -s -c 'split("\n")[:-1]')
+            git clone --depth=1 ${{ inputs.repo_url }} fallback-pkg
+
+            # Ambil nama package dari Makefile
+            pkgname=$(grep -m1 '^PKG_NAME:=' fallback-pkg/Makefile | cut -d'=' -f2 | tr -d ' ')
+            if [ -z "$pkgname" ]; then
+              echo "❌ Tidak bisa menemukan PKG_NAME di Makefile"
+              exit 1
+            fi
+
+            echo "Matrix hanya 1 package: $pkgname"
+            arr=$(jq -nc --arg p "$pkgname" '[$p]')
           else
             arr=$(jq -c -R 'split(" ")' <<< "${{ inputs.nama }}")
           fi
+
           echo "pkgs=$arr" >> $GITHUB_OUTPUT
         shell: bash
 
@@ -59,8 +69,8 @@ jobs:
           mkdir -p SNAPSDK/package/custom
           if [ -d "${{ matrix.pkg }}" ]; then
             cp -r ${{ matrix.pkg }} SNAPSDK/package/custom/
-          elif [ -d "fallback-pkgs/${{ matrix.pkg }}" ]; then
-            cp -r fallback-pkgs/${{ matrix.pkg }} SNAPSDK/package/custom/
+          elif [ -d "fallback-pkg" ]; then
+            cp -r fallback-pkg SNAPSDK/package/custom/${{ matrix.pkg }}
           else
             echo "⚠️ Package ${{ matrix.pkg }} tidak ditemukan!"
           fi
@@ -84,7 +94,6 @@ jobs:
         with:
           name: ${{ matrix.pkg }}
           path: release-artifacts/*.ipk
-
 
   release:
     needs: build
