@@ -83,22 +83,21 @@ jobs:
         with:
           path: all-artifacts
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload ke Release
+        id: upload_release2
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: build-${{ github.run_number }}
-          release_name: "Build multiple packages #${{ github.run_number }}"
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Assets (per file)
+          tag_name: build_ipk
+          name: "build_ipk"
+          body: |
+            ## OpenClash v${{ needs.check-version.outputs.latest_ver }}
+            **Changelog:**
+            - Update versi terbaru dari vernesong/dev
+            - **Full Changelog**: https://github.com/vernesong/OpenClash/commits/dev/
+            - Commit terakhir: ${{ needs.check-version.outputs.commit_msg }}
+            - Build IPK & APK
+          files: 
+            release-artifacts/*.ipk
+          prerelease: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for file in all-artifacts/**/**/*.ipk; do
-            echo "===> Upload $file"
-            gh release upload build-${{ github.run_number }} "$file" --clobber
-          done
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     
