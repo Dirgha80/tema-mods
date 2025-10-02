@@ -18,9 +18,9 @@ jobs:
 
       - name: Download OpenWrt SDK
         run: |
-          curl -SLk --retry 3 "https://github.com/tes-rep/tes-build/releases/download/SDK2/snap.tar.zst" -o /tmp/SNAPSDK.tar.zst
-          tar --zstd -xf /tmp/SNAPSDK.tar.zst -C /tmp
-          mv /tmp/openwrt-sdk-* SNAPSDK
+          curl -SLk --retry 3 "https://github.com/tes-rep/tes-build/releases/download/SDK2/15.tar.bz2" -o /tmp/SDK.tar.bz2
+          tar -xjf /tmp/SDK.tar.bz2 -C /tmp
+          mv /tmp/OpenWrt-SDK-* SNAPSDK
 
       - name: Update feeds
         run: |
