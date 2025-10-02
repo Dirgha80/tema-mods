@@ -5,7 +5,7 @@ PKG_VERSION:=1.0.2
 PKG_RELEASE:=1
 
 LUCI_TITLE:=NetMonitor LuCI app
-LUCI_DEPENDS:=+luci-base +netdata
+LUCI_DEPENDS:=+netdata
 
 define Package/$(PKG_NAME)/description
   LuCI interface for NetMonitor.
