@@ -1,4 +1,4 @@
-name: Build multiple ipk
+name: Build multiple ipk (matrix dynamic)
 
 on:
   workflow_dispatch:
@@ -6,11 +6,27 @@ on:
       nama:
         description: "Daftar paket (pisahkan dengan spasi, contoh: luci-app-netdata luci-app-ttyd)"
         required: true
-        default: "luci-app-netdata luci-theme-hj luci-app-netmon"
+        default: "luci-app-netdata luci-app-ttyd"
 
 jobs:
-  build:
+  set-matrix:
     runs-on: ubuntu-22.04
+    outputs:
+      pkgs: ${{ steps.set.outputs.pkgs }}
+    steps:
+      - name: Parse input to JSON array
+        id: set
+        run: |
+          arr=$(jq -c -R 'split(" ")' <<< "${{ inputs.nama }}")
+          echo "pkgs=$arr" >> $GITHUB_OUTPUT
+        shell: bash
+
+  build:
+    needs: set-matrix
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        pkg: ${{ fromJson(needs.set-matrix.outputs.pkgs) }}
 
     steps:
       - name: Checkout
@@ -21,42 +37,49 @@ jobs:
           curl -SLk --retry 3 "https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst" -o /tmp/SNAPSDK.tar.zst
           tar --zstd -xf /tmp/SNAPSDK.tar.zst -C /tmp
           mv /tmp/openwrt-sdk-* SNAPSDK
-
-      - name: Copy custom packages
+      - name: Update feeds
+        run: |
+          cd SNAPSDK
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+      - name: Copy custom package
         run: |
           mkdir -p SNAPSDK/package/custom
-          for pkg in ${{ inputs.nama }}; do
-            echo "===> Copy $pkg"
-            cp -r "$pkg" SNAPSDK/package/custom/ || true
-          done
+          cp -r ${{ matrix.pkg }} SNAPSDK/package/custom/
 
-      - name: Build packages
+      - name: Build package
         run: |
           cd SNAPSDK
           make defconfig
-          for pkg in ${{ inputs.nama }}; do
-            echo "===> Build $pkg"
-            make package/$pkg/compile V=s || true
-          done
+          make package/${{ matrix.pkg }}/compile V=s
 
       - name: Collect artifacts
         run: |
           mkdir -p release-artifacts
-          cp -vf SNAPSDK/bin/packages/*/*/*.ipk release-artifacts/ 2>/dev/null || true
-          cp -vf SNAPSDK/bin/targets/*/*/packages/*.ipk release-artifacts/ 2>/dev/null || true
-          echo "===> Semua file IPK terkumpul:"
+          cp -vf SNAPSDK/bin/packages/*/*/${{ matrix.pkg }}*.ipk release-artifacts/ 2>/dev/null || true
+          cp -vf SNAPSDK/bin/targets/*/*/packages/${{ matrix.pkg }}*.ipk release-artifacts/ 2>/dev/null || true
+          echo "===> IPK ${{ matrix.pkg }}:"
           ls -la release-artifacts/ || true
 
-      - name: Upload artifacts (Actions)
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: houjie-ipk
+          name: houjie-${{ matrix.pkg }}
           path: release-artifacts/*.ipk
 
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
           sudo apt-get install -y gh
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
 
       - name: Create Release
         id: create_release
@@ -65,7 +88,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: build-${{ github.run_number }}
-          release_name: "Build paket: ${{ inputs.nama }} #${{ github.run_number }}"
+          release_name: "Build multiple packages #${{ github.run_number }}"
           draft: false
           prerelease: false
 
@@ -73,7 +96,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for file in release-artifacts/*.ipk; do
+          for file in all-artifacts/**/**/*.ipk; do
             echo "===> Upload $file"
             gh release upload build-${{ github.run_number }} "$file" --clobber
           done
