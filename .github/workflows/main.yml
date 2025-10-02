@@ -97,7 +97,7 @@ jobs:
             - Commit terakhir: ${{ needs.check-version.outputs.commit_msg }}
             - Build IPK & APK
           files: 
-            release-artifacts/*.ipk
+            all-artifacts/*.ipk
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     
