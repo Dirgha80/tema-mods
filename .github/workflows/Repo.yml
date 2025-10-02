@@ -25,15 +25,11 @@ jobs:
             echo "Input kosong → clone repo: ${{ inputs.repo_url }}"
             git clone --depth=1 ${{ inputs.repo_url }} fallback-pkg
 
-            # Ambil nama package dari Makefile
-            pkgname=$(grep -m1 '^PKG_NAME:=' fallback-pkg/Makefile | cut -d'=' -f2 | tr -d ' ')
-            if [ -z "$pkgname" ]; then
-              echo "❌ Tidak bisa menemukan PKG_NAME di Makefile"
-              exit 1
-            fi
+            # Ambil nama repo (tanpa .git di belakang)
+            repo_name=$(basename -s .git "${{ inputs.repo_url }}")
 
-            echo "Matrix hanya 1 package: $pkgname"
-            arr=$(jq -nc --arg p "$pkgname" '[$p]')
+            echo "Matrix hanya 1 package: $repo_name"
+            arr=$(jq -nc --arg p "$repo_name" '[$p]')
           else
             arr=$(jq -c -R 'split(" ")' <<< "${{ inputs.nama }}")
           fi
