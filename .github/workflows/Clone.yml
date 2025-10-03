@@ -1,0 +1,140 @@
+name: Build multiple ipk+clone repo2
+
+on:
+  workflow_dispatch:
+    inputs:
+      nama:
+        description: "Daftar paket (pisahkan dengan spasi, contoh: luci-app-netdata luci-app-ttyd). Kalau kosong, akan clone repo_url"
+        required: false
+        default: ""
+      repo_url:
+        description: "Repo fallback untuk clone (digunakan kalau input nama kosong)"
+        required: false
+        default: "https://github.com/de-quenx/luci-theme-argon"
+      update_feeds:
+        description: "Update feeds sebelum build (true/false)"
+        required: false
+        default: "false"
+
+jobs:
+  set-matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      pkgs: ${{ steps.set.outputs.pkgs }}
+    steps:
+      - name: Tentukan daftar paket
+        id: set
+        run: |
+          if [ -z "${{ inputs.nama }}" ]; then
+            echo "Input kosong → clone repo: ${{ inputs.repo_url }}"
+            git clone --depth=1 ${{ inputs.repo_url }} fallback-pkg
+
+            repo_name=$(basename -s .git "${{ inputs.repo_url }}")
+            echo "Matrix hanya 1 package: $repo_name"
+
+            arr=$(jq -nc --arg p "$repo_name" '[$p]')
+          else
+            arr=$(jq -c -R 'split(" ")' <<< "${{ inputs.nama }}")
+          fi
+
+          echo "pkgs=$arr" >> $GITHUB_OUTPUT
+        shell: bash
+
+  build:
+    needs: set-matrix
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: ${{ fromJson(needs.set-matrix.outputs.pkgs) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache SDK
+        uses: actions/cache@v4
+        with:
+          path: SNAPSDK
+          key: ${{ runner.os }}-openwrt-sdk
+
+      - name: Download OpenWrt SDK
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -SLk --retry 3 "https://github.com/tes-rep/tes-build/releases/download/SDK2/stabil.tar.zst" -o /tmp/SNAPSDK.tar.zst
+          tar --zstd -xf /tmp/SNAPSDK.tar.zst -C /tmp
+          mv /tmp/openwrt-sdk-* SNAPSDK
+
+      - name: Update feeds (opsional)
+        if: inputs.update_feeds == 'true'
+        run: |
+          cd SNAPSDK
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Copy custom package
+        run: |
+          mkdir -p SNAPSDK/package/custom
+          if [ -d "${{ matrix.pkg }}" ]; then
+            cp -r ${{ matrix.pkg }} SNAPSDK/package/custom/
+          elif [ -d "fallback-pkg" ]; then
+            if [ -d "fallback-pkg/${{ matrix.pkg }}" ]; then
+              cp -r fallback-pkg/${{ matrix.pkg }} SNAPSDK/package/custom/
+            else
+              cp -r fallback-pkg SNAPSDK/package/custom/${{ matrix.pkg }}
+            fi
+          else
+            echo "⚠️ Package ${{ matrix.pkg }} tidak ditemukan!"
+          fi
+
+      - name: Build package
+        run: |
+          cd SNAPSDK
+          make defconfig
+          make package/${{ matrix.pkg }}/compile V=s || true
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p release-artifacts
+          cp -vf SNAPSDK/bin/packages/*/*/${{ matrix.pkg }}*.ipk release-artifacts/ 2>/dev/null || true
+          cp -vf SNAPSDK/bin/targets/*/*/packages/${{ matrix.pkg }}*.ipk release-artifacts/ 2>/dev/null || true
+          echo "===> IPK ${{ matrix.pkg }}:"
+          ls -la release-artifacts/ || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.pkg }}
+          path: release-artifacts/*.ipk
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Upload ke Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: build_ipk-${{ github.run_id }}
+          name: "Build IPK #${{ github.run_number }}"
+          body: |
+            Build hasil matrix:
+            ${{ needs.set-matrix.outputs.pkgs }}
+
+            Update feeds: ${{ inputs.update_feeds }}
+          files: all-artifacts/**/*.ipk
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete all artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: "*"
+          failOnError: false
