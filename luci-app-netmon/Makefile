@@ -1,25 +1,24 @@
+# Description: Network Monitor for LuCI
+# Author: houjie
+# Referensi: RizkyKotet-Dev
+# License: Unlicense
+
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-netmon
-PKG_VERSION:=1.0.2
-PKG_RELEASE:=1
+PKG_VERSION:=4.1.2
+PKG_RELEASE:=03102025
 
-LUCI_TITLE:=NetMonitor LuCI app
+PKG_MAINTAINER:=houjie80
+PKG_LICENSE:=Unlicense
+PKG_LICENSE_FILES:=LICENSE
+
+LUCI_TITLE:=LuCI Network Monitor
+LUCI_DESCRIPTION:=Network monitoring application for LuCI
 LUCI_DEPENDS:=+netdata
-
-define Package/$(PKG_NAME)/description
-  LuCI interface for NetMonitor.
-  Requires netdata. By houjie80.
-endef
-
-define Package/$(PKG_NAME)/prerm
-#!/bin/sh
-exit 0
-endef
-
-define Package/$(PKG_NAME)/postrm
-#!/bin/sh
-exit 0
-endef
+LUCI_PKGARCH:=all
 
 include $(TOPDIR)/feeds/luci/luci.mk
+
+# call BuildPackage - OpenWrt buildroot signature
+$(eval $(call BuildPackage,$(PKG_NAME)))
